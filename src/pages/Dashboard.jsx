@@ -1,17 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
-
-const handleLogout = async () => {
-  await signOut(auth);
-  window.location.href = "/signin"; // Redirect to Sign In after logout
-};
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
+import ResumeUpload from "../components/ResumeUpload";
+import JobRecommendations from "../components/JobRecommendations";
 
 const Dashboard = ({ user, logout }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [jobs, setJobs] = useState([]);
   const navigate = useNavigate();
+
+  // Fetch User Data from Firestore
+  useEffect(() => {
+    if (user?.uid) {
+      const fetchUserData = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      };
+      fetchUserData();
+    }
+  }, [user]);
+
+  // Logout User
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/signin"); // Redirect to Sign In
+  };
 
   return (
     <div className="ml-64 p-6 bg-gray-100 min-h-screen">
@@ -26,7 +49,7 @@ const Dashboard = ({ user, logout }) => {
         {/* Profile Image with Dropdown */}
         <div className="relative ml-4">
           <img
-            src="Avatar.webp"
+            src={userData?.profilePic || "Avatar.webp"}
             alt="Profile"
             className="rounded-full w-10 h-10 cursor-pointer hover:scale-110 transition-transform"
             onClick={() => setShowDropdown(!showDropdown)}
@@ -35,7 +58,7 @@ const Dashboard = ({ user, logout }) => {
           {/* Profile Dropdown */}
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-              <p className="p-3 font-semibold">{user?.name}</p>
+              <p className="p-3 font-semibold">{userData?.name || "User"}</p>
               <hr />
               <button
                 className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
@@ -61,7 +84,7 @@ const Dashboard = ({ user, logout }) => {
           onClick={() => setIsFullScreen(false)}
         >
           <img
-            src="Avatar.webp"
+            src={userData?.profilePic || "Avatar.webp"}
             alt="Profile Fullscreen"
             className="w-96 h-96 rounded-full cursor-pointer transition-transform duration-300 hover:scale-105"
           />
@@ -70,7 +93,7 @@ const Dashboard = ({ user, logout }) => {
 
       {/* Profile Section */}
       <div className="mt-6 bg-white p-6 rounded-md shadow">
-        <h2 className="text-xl font-semibold">Hello, {user?.name}</h2>
+        <h2 className="text-xl font-semibold">Hello, {userData?.name || "User"}</h2>
         <p className="text-gray-600">Here is your daily activities and job alerts</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -96,10 +119,16 @@ const Dashboard = ({ user, logout }) => {
         </p>
         <button
           className="bg-red-600 text-white px-4 py-2 rounded-md mt-4 md:mt-0"
-          onClick={() => navigate("/edit-profile")}
+          onClick={() => navigate("/profile")}
         >
           Edit Profile
         </button>
+      </div>
+
+      {/* Resume Upload & Job Recommendations */}
+      <div className="mt-6">
+        <ResumeUpload setJobs={setJobs} />
+        <JobRecommendations jobs={jobs} />
       </div>
 
       {/* Recently Applied Jobs */}
