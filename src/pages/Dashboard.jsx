@@ -1,40 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
-import ResumeUpload from "../components/ResumeUpload";
-import JobRecommendations from "../components/JobRecommendations";
+import { auth } from "../firebase";
 
-const Dashboard = ({ user, logout }) => {
+const handleLogout = async () => {
+  await signOut(auth);
+  window.location.href = "/signin"; // Redirect to Sign In after logout
+};
+
+const Dashboard = ({ user }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [userData, setUserData] = useState(null);
-  const [jobs, setJobs] = useState([]);
   const navigate = useNavigate();
-
-  // Fetch User Data from Firestore
-  useEffect(() => {
-    if (user?.uid) {
-      const fetchUserData = async () => {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
-      };
-      fetchUserData();
-    }
-  }, [user]);
-
-  // Logout User
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/signin"); // Redirect to Sign In
-  };
 
   return (
     <div className="ml-64 p-6 bg-gray-100 min-h-screen">
@@ -42,6 +19,8 @@ const Dashboard = ({ user, logout }) => {
       <div className="flex justify-between items-center bg-white p-4 shadow rounded-md relative">
         <input
           type="text"
+          id="jobSearch"
+          name="jobSearch"
           placeholder="Job title, keyword, company"
           className="w-full p-2 border border-gray-300 rounded-md"
         />
@@ -58,7 +37,7 @@ const Dashboard = ({ user, logout }) => {
           {/* Profile Dropdown */}
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
-              <p className="p-3 font-semibold">{userData?.name || "User"}</p>
+              <p className="p-3 font-semibold">{user?.name}</p>
               <hr />
               <button
                 className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
@@ -93,21 +72,17 @@ const Dashboard = ({ user, logout }) => {
 
       {/* Profile Section */}
       <div className="mt-6 bg-white p-6 rounded-md shadow">
-        <h2 className="text-xl font-semibold">Hello, {userData?.name || "User"}</h2>
+        <h2 className="text-xl font-semibold">Hello, {user?.name}</h2>
         <p className="text-gray-600">Here is your daily activities and job alerts</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           <div className="bg-blue-100 p-4 rounded-md text-center">
-            <h3 className="text-2xl font-bold">589</h3>
-            <p>Applied Jobs</p>
+            <h3 className="text-2xl font-bold">{registeredJobs.length}</h3>
+            <p>Registered Jobs</p>
           </div>
           <div className="bg-yellow-100 p-4 rounded-md text-center">
-            <h3 className="text-2xl font-bold">238</h3>
-            <p>Favorite Jobs</p>
-          </div>
-          <div className="bg-green-100 p-4 rounded-md text-center">
-            <h3 className="text-2xl font-bold">574</h3>
-            <p>Job Alerts</p>
+            <h3 className="text-2xl font-bold">{registeredHackathons.length}</h3>
+            <p>Registered Hackathons</p>
           </div>
         </div>
       </div>
@@ -131,24 +106,40 @@ const Dashboard = ({ user, logout }) => {
         <JobRecommendations jobs={jobs} />
       </div>
 
-      {/* Recently Applied Jobs */}
+      {/* Registered Jobs Section */}
       <div className="mt-6 bg-white p-6 rounded-md shadow">
-        <h3 className="text-lg font-semibold">Recently Applied</h3>
-
-        <div className="mt-4 space-y-4">
-          {["Networking Engineer", "Product Designer", "Junior Graphic Designer", "Visual Designer"].map((job, index) => (
-            <div key={index} className="flex flex-col md:flex-row justify-between items-center p-4 bg-gray-50 rounded-md shadow-sm">
-              <div className="text-center md:text-left">
-                <h4 className="font-semibold">{job}</h4>
-                <p className="text-gray-500">$50k-80k/month</p>
+        <h3 className="text-lg font-semibold">Registered Jobs</h3>
+        {registeredJobs.length === 0 ? (
+          <p className="text-gray-500 mt-2">No registered jobs found.</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {registeredJobs.map((job) => (
+              <div key={job.id} className="p-4 bg-gray-50 rounded-md shadow-sm">
+                <h4 className="font-semibold">{job?.title}</h4>
+                <p className="text-gray-500">{job?.company}</p>
+                <p className="text-gray-700">{job?.salary}</p>
               </div>
-              <span className="text-green-600 mt-2 md:mt-0">✔ Active</span>
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-md mt-2 md:mt-0">
-                View Details
-              </button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Registered Hackathons Section */}
+      <div className="mt-6 bg-white p-6 rounded-md shadow">
+        <h3 className="text-lg font-semibold">Registered Hackathons</h3>
+        {registeredHackathons.length === 0 ? (
+          <p className="text-gray-500 mt-2">No registered hackathons found.</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {registeredHackathons.map((hackathon) => (
+              <div key={hackathon.id} className="p-4 bg-gray-50 rounded-md shadow-sm">
+                <h4 className="font-semibold">{hackathon?.name}</h4>
+                <p className="text-gray-500">{hackathon?.organizer}</p>
+                <p className="text-gray-700">{hackathon?.date}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

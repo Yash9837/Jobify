@@ -1,9 +1,14 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db, auth } from "../firebase"; // Import Firebase auth
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth"; // Hook to get authenticated user
 
 const HackathonDetails = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("timeline");
+  const [user, loading] = useAuthState(auth); // Get the logged-in user
+  const [isRegistered, setIsRegistered] = useState(false);
 
   const hackathon = {
     title: "Designathon",
@@ -47,6 +52,29 @@ const HackathonDetails = () => {
       ],
       tools: ["Notion", "Figma"],
     },
+  };
+
+  const handleRegister = async () => {
+    if (!user) {
+      alert("Please log in to register.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "hackathonRegistrations"), {
+        hackathonId: id,
+        hackathonTitle: hackathon.title,
+        userId: user.uid, // Store Firebase Auth user ID
+        name: user.displayName, // Store user’s name
+        email: user.email, // Store user’s email
+        registeredAt: serverTimestamp(),
+      });
+      setIsRegistered(true);
+      alert("Registered successfully!");
+    } catch (error) {
+      console.error("Error registering:", error);
+      alert("Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -112,14 +140,6 @@ const HackathonDetails = () => {
                 <p>{hackathon.details.caseStudy}</p>
                 <h3 className="mt-4 font-semibold">Registration Dates</h3>
                 <p>{hackathon.details.registrationDates}</p>
-                <h3 className="mt-4 font-semibold">Rounds</h3>
-                {hackathon.details.rounds.map((round, index) => (
-                  <p key={index}>
-                    <strong>{round.title}</strong> {round.description}
-                  </p>
-                ))}
-                <h3 className="mt-4 font-semibold">Tools</h3>
-                <p>{hackathon.details.tools.join(", ")}</p>
               </>
             )}
           </div>
@@ -129,8 +149,16 @@ const HackathonDetails = () => {
         <div className="w-1/3 ml-6">
           <div className="bg-white p-4 shadow-md rounded-md">
             <h2 className="text-2xl font-semibold">{hackathon.status}</h2>
-            <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded">Register</button>
+
+            <button
+              onClick={handleRegister}
+              className="mt-4 w-full bg-blue-600 text-white py-2 rounded"
+              disabled={isRegistered || loading}
+            >
+              {loading ? "Checking login..." : isRegistered ? "Registered" : "Register"}
+            </button>
           </div>
+
           <div className="bg-white p-4 shadow-md rounded-md mt-4">
             <p>👥 Registered: {hackathon.registrations}</p>
             <p>👤 Team Size: {hackathon.teamSize}</p>

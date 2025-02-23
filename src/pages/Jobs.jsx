@@ -1,4 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { db, auth } from "../firebase";
+import { collection, addDoc, getDoc, doc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 const jobs = [
   { title: "Technical Support Specialist", type: "PART-TIME" },
@@ -15,22 +18,87 @@ const jobs = [
 ];
 
 const Jobs = () => {
+  const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState({ name: "N/A", phone: "N/A" });
+
+  // Fetch user details from Firestore
+  const fetchUserDetails = async (uid) => {
+    try {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        setUserData({
+          name: userSnap.data().name || "N/A",
+          phone: userSnap.data().phone || "N/A",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
+
+  // Check user authentication state
+  useEffect(() => {
+    onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName || "N/A",
+          phoneNumber: currentUser.phoneNumber || "N/A",
+          photoURL: currentUser.photoURL || "N/A",
+          providerId: currentUser.providerData[0]?.providerId || "N/A",
+        });
+
+        // Fetch additional user details from Firestore
+        await fetchUserDetails(currentUser.uid);
+      } else {
+        setUser(null);
+      }
+    });
+  }, []);
+
+  // Handle Bookmark
+  const handleBookmark = async (job) => {
+    if (!user) {
+      alert("Please log in to save bookmarks!");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "bookmarks"), {
+        jobTitle: job.title,
+        jobType: job.type,
+        userId: user.uid,
+        email: user.email,
+        name: userData.name, // Automatically storing the name
+        phone: userData.phone, // Automatically storing the phone number
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        providerId: user.providerId,
+        timestamp: new Date(),
+      });
+      alert("Job bookmarked successfully!");
+    } catch (error) {
+      console.error("Error saving bookmark:", error);
+      alert("Failed to save bookmark.");
+    }
+  };
+
   return (
     <div className="p-6 w-full">
-      {/* Header Section */}
-      <div className="flex justify-between items-center ml-[300px]">
+      <div className="flex justify-between items-center max-w-5xl mx-auto">
         <h2 className="text-4xl font-semibold text-black">Jobs</h2>
         <button className="text-blue-600 hover:underline">View All →</button>
       </div>
 
-      {/* Job Cards Grid */}
-      <div className="grid grid-cols-3 gap-6 mt-6 ml-[400px]" >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 max-w-5xl mx-auto">
         {jobs.map((job, index) => (
           <div
             key={index}
-            className="bg-white shadow-md rounded-lg p-4 border w-80 relative"
+            className="bg-white shadow-md rounded-lg p-4 border w-full relative"
           >
-            {/* Job Type Badge */}
             <span
               className={`absolute top-4 left-4 text-xs font-bold py-1 px-2 rounded ${
                 job.type === "FULL-TIME"
@@ -43,21 +111,21 @@ const Jobs = () => {
               {job.type}
             </span>
 
-            {/* Job Title */}
             <h3 className="mt-8 font-semibold">{job.title}</h3>
             <p className="text-gray-500 text-sm">Salary: $20,000 - $25,000</p>
 
-            {/* Company Info */}
             <div className="flex items-center mt-2">
               <img src="Google Logo.jpg" alt="Google Logo" className="w-5 h-5" />
               <p className="text-gray-600 text-sm ml-2">Google Inc.</p>
             </div>
 
-            {/* Location */}
             <p className="text-gray-400 text-xs mt-1">📍 Dhaka, Bangladesh</p>
 
-            {/* Bookmark Icon */}
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            {/* Bookmark Button */}
+            <button
+              onClick={() => handleBookmark(job)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
               📌
             </button>
           </div>
