@@ -1,13 +1,14 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { db, auth } from "../firebase"; // Import Firebase auth
+import { useState } from "react";
+import { db, auth } from "../firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth"; // Hook to get authenticated user
+import { useAuthState } from "react-firebase-hooks/auth";
+import toast, { Toaster } from "react-hot-toast"; // Import Toaster and toast
 
 const HackathonDetails = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("timeline");
-  const [user, loading] = useAuthState(auth); // Get the logged-in user
+  const [user, loading] = useAuthState(auth);
   const [isRegistered, setIsRegistered] = useState(false);
 
   const hackathon = {
@@ -27,7 +28,7 @@ const HackathonDetails = () => {
         title: "Idea Submission Round (via Unstop)",
         status: "Live",
         details:
-          "For this round, submit a one-page PDF summarizing your approach and ideas. Your document should include: team details, track selection, identified problems, proposed solutions, features & implementation, and design progress.",
+          "Submit a one-page PDF summarizing your approach and ideas. Your document should include: team details, track selection, identified problems, proposed solutions, features & implementation, and design progress.",
         start: "19 Feb 25, 12:47 PM IST",
         end: "24 Feb 25, 11:59 PM IST",
       },
@@ -56,7 +57,7 @@ const HackathonDetails = () => {
 
   const handleRegister = async () => {
     if (!user) {
-      alert("Please log in to register.");
+      toast.error("Please log in to register.");
       return;
     }
 
@@ -64,21 +65,23 @@ const HackathonDetails = () => {
       await addDoc(collection(db, "hackathonRegistrations"), {
         hackathonId: id,
         hackathonTitle: hackathon.title,
-        userId: user.uid, // Store Firebase Auth user ID
-        name: user.displayName, // Store user’s name
-        email: user.email, // Store user’s email
+        userId: user.uid,
+        name: user.displayName,
+        email: user.email,
         registeredAt: serverTimestamp(),
       });
       setIsRegistered(true);
-      alert("Registered successfully!");
+      toast.success("Registered successfully! 🎉");
     } catch (error) {
       console.error("Error registering:", error);
-      alert("Registration failed. Please try again.");
+      toast.error("Registration failed. Please try again.");
     }
   };
 
   return (
     <div className="ml-64 bg-gray-100 min-h-screen">
+      <Toaster position="top-right" reverseOrder={false} /> {/* Add the Toaster for displaying notifications */}
+
       {/* Banner Section */}
       <div className="relative">
         <img src={hackathon.banner} alt="Hackathon Banner" className="w-full h-64 object-cover" />

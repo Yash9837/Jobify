@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
 import { collection, addDoc, getDoc, doc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const jobs = [
   { title: "Technical Support Specialist", type: "PART-TIME" },
@@ -62,7 +64,16 @@ const Jobs = () => {
   // Handle Bookmark
   const handleBookmark = async (job) => {
     if (!user) {
-      alert("Please log in to save bookmarks!");
+      toast.error("Please log in to save bookmarks!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
       return;
     }
 
@@ -79,15 +90,35 @@ const Jobs = () => {
         providerId: user.providerId,
         timestamp: new Date(),
       });
-      alert("Job bookmarked successfully!");
+
+      toast.success("Job bookmarked successfully!", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
     } catch (error) {
       console.error("Error saving bookmark:", error);
-      alert("Failed to save bookmark.");
+      toast.error("Failed to save bookmark.", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+      });
     }
   };
 
   return (
     <div className="p-6 w-full">
+      <ToastContainer />
       <div className="flex justify-between items-center max-w-5xl mx-auto">
         <h2 className="text-4xl font-semibold text-black">Jobs</h2>
         <button className="text-blue-600 hover:underline">View All →</button>
